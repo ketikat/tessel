@@ -1,5 +1,7 @@
 'use strict';
-
+const express = require('express');
+const app = express();
+const server = require('http').Server(app);
 // Import the interface to Tessel hardware
 const tessel = require('tessel');
 var climatelib = require('climate-si7020');
@@ -62,15 +64,25 @@ accel.on('ready', function () {
   //Initialize the CAMERA
   var av = require('tessel-av');
   var os = require('os');
+  const path = require('path');
   var http = require('http');
   var port = 8000;
   var camera = new av.Camera();
+  var capture = camera.capture();
 
-  http.createServer( (req, res, next)=>{
-    res.writeHead(200, { 'Content-Type': 'image/jpg' });
-    camera.capture().pipe(res);
-  }).listen(port, () => console.log(`http://${os.hostname()}.local:${port}`));
-
+  // http.createServer( (req, res, next)=>{
+  //   res.writeHead(200, { 'Content-Type': 'image/jpg' });
+  //   camera.capture().pipe(res);
+  // }).listen(port, () => console.log(`http://${os.hostname()}.local:${port}`));
+  server.listen(port, function () {
+    console.log(`http://${os.hostname()}.local:${port}`);
+  });
+   
+  app.use(express.static(path.join(__dirname, '/public')));
+  app.get('/stream', (request, response) => {
+    //response.redirect(camera.url);
+  });
+  
 
   // LIGHTS, CAMERA, GHOSTACTION
 tessel.led[2].on();
@@ -79,7 +91,8 @@ setInterval(() => {
   if (movingGhostAlert && tempGhostAlert) {
   tessel.led[2].toggle();
   tessel.led[3].toggle();
-
-  //camera.capture().pipe(`http://${os.hostname()}.local:${port}`);
+  app.get('/stream', (request, response) => {
+    response.redirect(camera.url);
+  });
 }
 }, 100);
